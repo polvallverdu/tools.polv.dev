@@ -12,7 +12,7 @@
 	const { class: className, onClick }: Props = $props();
 	// Eventually, we might want to make this data-driven
 	const tools = [
-		{ href: '/background-removal', label: 'Background Removal', icon: SquareTerminal }
+		{ href: '/background-remover', label: 'Background Remover', icon: SquareTerminal }
 	];
 </script>
 
