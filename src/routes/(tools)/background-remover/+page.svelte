@@ -11,7 +11,7 @@
   import { Select, SelectItem, SelectTrigger } from "@/components/ui/select";
   import { BG_REMOVAL_MODELS, type BGRemovalModel } from "@/tools/backgroundRemoval/types";
   import SelectContent from "@/components/ui/select/select-content.svelte";
-
+  import SvelteSeo from "svelte-seo";
   onMount(() => {
     initWorker();
   });
@@ -20,6 +20,11 @@
     file.forEach((f) => processImage(f));
   }
 </script>
+
+<SvelteSeo
+  title="Background Remover | Pol Tools"
+  description="Remove the background of an image using various AI models locally in your browser."
+/>
 
 <div>
   <h1>Background Remover</h1>
