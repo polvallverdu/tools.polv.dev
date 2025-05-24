@@ -1,31 +1,44 @@
 <script lang="ts">
-	import { onDestroy, onMount } from 'svelte';
-	import { getWorker, initWorker } from '@/tools/backgroundRemoval/index.svelte';
-	import { useTable } from 'svelte-tinybase';
-	import { db } from '@/db/db.svelte';
+  import { onMount } from "svelte";
+  import {
+    getSelectedModel,
+    initWorker,
+    processImage,
+    setSelectedModel,
+  } from "@/tools/backgroundRemoval/index.svelte";
+  import Library from "@/components/Library.svelte";
+  import ImageDropzone from "@/components/ImageDropzone.svelte";
+  import { Select, SelectItem, SelectTrigger } from "@/components/ui/select";
+  import { BG_REMOVAL_MODELS, type BGRemovalModel } from "@/tools/backgroundRemoval/types";
+  import SelectContent from "@/components/ui/select/select-content.svelte";
 
-	onMount(() => {
-		initWorker();
-	});
+  onMount(() => {
+    initWorker();
+  });
 
-	// onDestroy(async () => {
-	// 	await destroyBgRemoveDb();
-	// });
-
-	const images = useTable(db, 'images');
-
-	$effect(() => {
-		console.log(images);
-	});
+  function handleFile(file: File[]) {
+    file.forEach((f) => processImage(f));
+  }
 </script>
 
 <div>
-	<h1>Background Remover</h1>
-	<p>
-		{#if getWorker() != null}
-			✅ Worker is initialized
-		{:else}
-			❌ Worker is not initialized
-		{/if}
-	</p>
+  <h1>Background Remover</h1>
+  <Select
+    type="single"
+    value={getSelectedModel()}
+    onValueChange={(value) => setSelectedModel(value as BGRemovalModel)}
+  >
+    <SelectTrigger>
+      <p>Selected model: {getSelectedModel()}</p>
+    </SelectTrigger>
+    <SelectContent>
+      {#each BG_REMOVAL_MODELS as model}
+        <SelectItem value={model}>{model}</SelectItem>
+      {/each}
+    </SelectContent>
+  </Select>
+
+  <ImageDropzone onFiles={handleFile} />
 </div>
+
+<Library />
