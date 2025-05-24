@@ -2,11 +2,10 @@
   import Sidebar from "$lib/components/Sidebar.svelte";
   import "../app.css";
   import { Button } from "$lib/components/ui/button";
-  import { Loader2Icon, Menu, XIcon } from "@lucide/svelte";
+  import { Menu, XIcon } from "@lucide/svelte";
   import { Sheet, SheetContent, SheetTrigger } from "$lib/components/ui/sheet";
   import SheetClose from "@/components/ui/sheet/sheet-close.svelte";
   import { onMount, type Snippet } from "svelte";
-  import { isDbInitialized } from "@/db/db.svelte";
   import { Toaster } from "svelte-sonner";
   import { pwaInfo } from "virtual:pwa-info";
 
@@ -69,12 +68,6 @@
   </div>
 
   <main class="flex-1 p-8 pt-16 md:pt-8">
-    {#if typeof window !== "undefined" && isDbInitialized()}
-      {@render children()}
-    {:else}
-      <div class="flex h-full w-full items-center justify-center">
-        <Loader2Icon class="size-10 animate-spin" />
-      </div>
-    {/if}
+    {@render children()}
   </main>
 </div>

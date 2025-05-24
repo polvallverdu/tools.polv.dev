@@ -16,10 +16,10 @@ importers:
         version: 1.4.1
       svelte-tinybase:
         specifier: 0.0.1
-        version: 0.0.1(svelte@5.25.6)(tinybase@6.0.0(prettier@3.5.3))
+        version: 0.0.1(svelte@5.25.6)(tinybase@6.0.0(@cloudflare/workers-types@4.20250524.0)(prettier@3.5.3))
       tinybase:
         specifier: ^6.0.0
-        version: 6.0.0(prettier@3.5.3)
+        version: 6.0.0(@cloudflare/workers-types@4.20250524.0)(prettier@3.5.3)
     devDependencies:
       '@eslint/compat':
         specifier: ^1.2.5
@@ -624,6 +624,9 @@ packages:
   '@babel/types@7.27.1':
     resolution: {integrity: sha512-+EzkxvLNfiUeKMgy/3luqfsCWFRXLb7U6wNQTk60tovuckwB15B191tJWvpp4HjiQWdJkCxO3Wbvc6jlk3Xb2Q==}
     engines: {node: '>=6.9.0'}
+
+  '@cloudflare/workers-types@4.20250524.0':
+    resolution: {integrity: sha512-Tc/N/5nn3Jq+w7s+QPEgiyBZ0F0ebH9XWQ6YiUZTue79E7nybYDGh4lBCr2y4bC+RYiOP8KZPYWr811Hd3Oh2A==}
 
   '@emnapi/runtime@1.4.0':
     resolution: {integrity: sha512-64WYIf4UYcdLnbKn/umDlNjQDSS8AgZrI/R9+x5ilkUVFxXcA1Ebl+gQLc/6mERA4407Xof0R7wEyEuj091CVw==}
@@ -3827,6 +3830,9 @@ snapshots:
       '@babel/helper-string-parser': 7.27.1
       '@babel/helper-validator-identifier': 7.27.1
 
+  '@cloudflare/workers-types@4.20250524.0':
+    optional: true
+
   '@emnapi/runtime@1.4.0':
     dependencies:
       tslib: 2.8.1
@@ -5933,10 +5939,10 @@ snapshots:
       runed: 0.26.0(svelte@5.25.6)
       svelte: 5.25.6
 
-  svelte-tinybase@0.0.1(svelte@5.25.6)(tinybase@6.0.0(prettier@3.5.3)):
+  svelte-tinybase@0.0.1(svelte@5.25.6)(tinybase@6.0.0(@cloudflare/workers-types@4.20250524.0)(prettier@3.5.3)):
     dependencies:
       svelte: 5.25.6
-      tinybase: 6.0.0(prettier@3.5.3)
+      tinybase: 6.0.0(@cloudflare/workers-types@4.20250524.0)(prettier@3.5.3)
 
   svelte-toolbelt@0.7.1(svelte@5.25.6):
     dependencies:
@@ -6006,8 +6012,9 @@ snapshots:
       commander: 2.20.3
       source-map-support: 0.5.21
 
-  tinybase@6.0.0(prettier@3.5.3):
+  tinybase@6.0.0(@cloudflare/workers-types@4.20250524.0)(prettier@3.5.3):
     optionalDependencies:
+      '@cloudflare/workers-types': 4.20250524.0
       prettier: 3.5.3
 
   tinyglobby@0.2.13:
