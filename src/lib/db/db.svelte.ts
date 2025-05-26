@@ -9,6 +9,16 @@ const tablesSchema = {
     input: { type: "string" },
     createdAt: { type: "string" },
   },
+  colors: {
+    name: { type: "string" },
+    hex: { type: "string" },
+    rgb: { type: "string" },
+    hsl: { type: "string" },
+    hwb: { type: "string" },
+    oklab: { type: "string" },
+    oklch: { type: "string" },
+    createdAt: { type: "string" },
+  },
 } satisfies TablesSchema;
 
 let dbInitialized = $state(false);
