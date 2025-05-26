@@ -26,24 +26,37 @@
   description="Remove the background of an image using various AI models locally in your browser."
 />
 
-<div>
-  <h1>Background Remover</h1>
-  <Select
-    type="single"
-    value={getSelectedModel()}
-    onValueChange={(value) => setSelectedModel(value as BGRemovalModel)}
-  >
-    <SelectTrigger>
-      <p>Selected model: {getSelectedModel()}</p>
-    </SelectTrigger>
-    <SelectContent>
-      {#each BG_REMOVAL_MODELS as model}
-        <SelectItem value={model}>{model}</SelectItem>
-      {/each}
-    </SelectContent>
-  </Select>
+<div class="container mx-auto max-w-6xl space-y-8 pb-6">
+  <div class="space-y-2 text-center">
+    <h1 class="text-3xl font-bold">Background Remover</h1>
+    <p class="text-muted-foreground">
+      Remove the background of an image using various AI models locally in your browser.
+    </p>
+  </div>
 
-  <ImageDropzone onFiles={handleFile} />
+  <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+    <div class="md:col-span-1">
+      <h2 class="mb-2 text-lg font-semibold">Select Model</h2>
+      <Select
+        type="single"
+        value={getSelectedModel()}
+        onValueChange={(value) => setSelectedModel(value as BGRemovalModel)}
+      >
+        <SelectTrigger>
+          <p>Selected model: {getSelectedModel()}</p>
+        </SelectTrigger>
+        <SelectContent>
+          {#each BG_REMOVAL_MODELS as model}
+            <SelectItem value={model}>{model}</SelectItem>
+          {/each}
+        </SelectContent>
+      </Select>
+    </div>
+
+    <div class="md:col-span-2">
+      <ImageDropzone onFiles={handleFile} />
+    </div>
+  </div>
 </div>
 
 <Library />
