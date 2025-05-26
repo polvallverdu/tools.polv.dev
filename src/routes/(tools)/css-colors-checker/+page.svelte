@@ -5,10 +5,13 @@
   import { Button } from "@/components/ui/button";
   import { Input } from "@/components/ui/input";
   import { Label } from "@/components/ui/label";
-  import { Card } from "@/components/ui/card";
+  import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
   import { Separator } from "@/components/ui/separator";
-  import { Save, Trash2, Copy, CheckCircle } from "@lucide/svelte";
+  import { Save, Trash2, Copy, CheckCircle, Share } from "@lucide/svelte";
   import { toast } from "svelte-sonner";
+  import { goto } from "$app/navigation";
+  import { untrack } from "svelte";
+  import { page } from "$app/state";
 
   // Reactive colors table
   const colors = useTable(db, "colors");
@@ -17,6 +20,12 @@
   let colorName = $state("");
   let colorInput = $state("#ff0000");
   let copiedFormat = $state<string | null>(null);
+
+  $effect(() => {
+    const currentUrl = untrack(() => page.url);
+    currentUrl.searchParams.set("color", colorInput);
+    goto(currentUrl.href, { replaceState: false, keepFocus: true, noScroll: true });
+  });
 
   // Parsed color object
   let parsedColor = $derived.by(() => {
@@ -60,7 +69,7 @@
   }
 
   function saveColor() {
-    if (!parsedColor || !colorInput.trim()) {
+    if (!parsedColor || !colorName.trim()) {
       toast.error("Please enter a color name and valid color");
       return;
     }
@@ -69,7 +78,7 @@
 
     const id = crypto.randomUUID();
     db.setRow("colors", id, {
-      name: colorInput.trim(),
+      name: colorName.trim(),
       hex: colorFormats.hex,
       rgb: colorFormats.rgb,
       hsl: colorFormats.hsl,
@@ -113,6 +122,53 @@
     const luminance = culori.wcagLuminance(color);
     return luminance > 0.5 ? "#000000" : "#ffffff";
   }
+
+  const currentUrl = untrack(() => page.url);
+  const colorParam = currentUrl.searchParams.get("color");
+  if (colorParam) {
+    colorInput = colorParam;
+  }
+
+  const shareableLink = $derived(page.url.href);
+  let copiedShareLinkFeedback = $state(false);
+
+  async function handleCopyShareLink() {
+    if (!shareableLink) return;
+    try {
+      await navigator.clipboard.writeText(shareableLink);
+      toast.success("Shareable link copied to clipboard!");
+      copiedShareLinkFeedback = true;
+      setTimeout(() => {
+        copiedShareLinkFeedback = false;
+      }, 2000);
+    } catch (err) {
+      toast.error("Failed to copy link.");
+      console.error("Failed to copy share link:", err);
+    }
+  }
+
+  async function handleNativeShare() {
+    if (!navigator.share) {
+      toast.error("Native sharing is not supported on this device");
+      return;
+    }
+
+    if (!shareableLink || !colorFormats) return;
+
+    try {
+      await navigator.share({
+        title: "CSS Color Tool",
+        text: `Check out this color: ${colorFormats.hex} (${colorInput})`,
+        url: shareableLink,
+      });
+    } catch (err) {
+      // User cancelled or sharing failed
+      if ((err as Error).name !== "AbortError") {
+        toast.error("Failed to share");
+        console.error("Failed to share:", err);
+      }
+    }
+  }
 </script>
 
 <svelte:head>
@@ -123,7 +179,7 @@
   />
 </svelte:head>
 
-<div class="container mx-auto max-w-6xl space-y-8 p-6">
+<div class="container mx-auto max-w-6xl space-y-8 pb-6">
   <div class="space-y-2 text-center">
     <h1 class="text-3xl font-bold">CSS Colors Checker</h1>
     <p class="text-muted-foreground">
@@ -131,67 +187,59 @@
     </p>
   </div>
 
-  <div class="grid grid-cols-1 gap-8 lg:grid-cols-2">
-    <!-- Input Section -->
-    <Card class="p-6">
-      <div class="space-y-6">
-        <div class="space-y-4">
-          <div class="space-y-2">
-            <Label for="color-input">Color Input</Label>
-            <input
-              id="color-picker"
-              type="color"
-              value={colorHex}
-              oninput={(e) => handlePickerInput(e.currentTarget.value)}
-              class="border-input bg-background h-10 w-16 cursor-pointer rounded border"
-            />
-            <Input
-              id="color-input"
-              bind:value={colorInput}
-              placeholder="Enter color (e.g., #ff0000, rgb(255,0,0), red)"
-              class="font-mono"
-            />
-          </div>
-        </div>
-
-        {#if parsedColor && colorFormats}
+  <div class="flex grid-cols-2 grid-rows-4 flex-col gap-4 lg:grid">
+    <!-- Item 1: Input & Preview Card -->
+    <Card class="row-span-2">
+      <CardHeader>
+        <CardTitle>Color Input</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div class="space-y-6">
           <div class="space-y-4">
-            <Separator />
-
-            <!-- Color Preview -->
-            <div class="space-y-2">
-              <Label>Color Preview</Label>
-              <div
-                class="border-input flex h-20 w-full items-center justify-center rounded-md border text-sm font-medium"
-                style="background-color: {colorFormats.hex}; color: {getContrastColor(
-                  colorFormats.hex,
-                )}"
-              >
-                {colorFormats.hex}
-              </div>
-            </div>
-
-            <!-- Save Color -->
-            <div class="space-y-2">
-              <Label for="color-name">Save Color</Label>
-              <div class="flex gap-2">
-                <Input id="color-name" bind:value={colorName} placeholder="Enter color name..." />
-                <Button onclick={saveColor} disabled={!colorName.trim()}>
-                  <Save class="h-4 w-4" />
-                  Save
-                </Button>
-              </div>
+            <div class="flex gap-2">
+              <Input
+                id="color-picker"
+                type="color"
+                value={colorHex}
+                oninput={(e) => handlePickerInput(e.currentTarget.value)}
+                class="border-input bg-background h-10 w-16 cursor-pointer rounded border"
+              />
+              <Input
+                id="color-input"
+                bind:value={colorInput}
+                placeholder="Enter color (e.g., #ff0000, rgb(255,0,0), red)"
+                class="font-mono"
+              />
             </div>
           </div>
-        {/if}
-      </div>
+
+          {#if parsedColor && colorFormats}
+            <div class="space-y-4">
+              <Separator />
+              <!-- Color Preview -->
+              <div class="space-y-2">
+                <Label>Color Preview</Label>
+                <div
+                  class="border-input flex h-20 w-full items-center justify-center rounded-md border text-sm font-medium"
+                  style="background-color: {colorFormats.hex}; color: {getContrastColor(
+                    colorFormats.hex,
+                  )}"
+                >
+                  {colorFormats.hex}
+                </div>
+              </div>
+            </div>
+          {/if}
+        </div>
+      </CardContent>
     </Card>
 
-    <!-- Color Formats Display -->
-    <Card class="p-6">
-      <div class="space-y-4">
-        <h3 class="text-lg font-semibold">Color Formats</h3>
-
+    <!-- Item 2: Color Formats Card -->
+    <Card class="col-start-2 row-span-4 row-start-1">
+      <CardHeader>
+        <CardTitle>Color Formats</CardTitle>
+      </CardHeader>
+      <CardContent>
         {#if parsedColor && colorFormats}
           <div class="space-y-3">
             {#each Object.entries(colorFormats) as [format, value]}
@@ -226,20 +274,83 @@
             <p>Enter a valid color to see format conversions</p>
           </div>
         {/if}
-      </div>
+      </CardContent>
+    </Card>
+
+    <!-- Item 3: Share This Color Card -->
+    <Card>
+      <CardHeader>
+        <CardTitle>Share This Color</CardTitle>
+        <CardDescription>
+          Share this link to send the current color and its conversions.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div class="flex gap-2">
+          <Input
+            type="text"
+            value={shareableLink}
+            readonly
+            placeholder="Link will appear here"
+            class="flex-1 font-mono"
+          />
+          <Button
+            onclick={handleCopyShareLink}
+            variant="outline"
+            disabled={!shareableLink || copiedShareLinkFeedback}
+            size="icon"
+          >
+            {#if copiedShareLinkFeedback}
+              <CheckCircle class="text-green-500" />
+            {:else}
+              <Copy />
+            {/if}
+          </Button>
+          <Button
+            onclick={handleNativeShare}
+            variant="outline"
+            disabled={!shareableLink}
+            title="Share using your device's native sharing options"
+            size="icon"
+          >
+            <Share />
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+
+    <!-- Item 4: Save Current Color Card (conditional) -->
+    <Card>
+      <CardHeader>
+        <CardTitle>Save Current Color</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div class="space-y-2">
+          <Label for="color-name">Color Name</Label>
+          <div class="flex gap-2">
+            <Input id="color-name" bind:value={colorName} placeholder="Enter color name..." />
+            <Button
+              onclick={saveColor}
+              disabled={!colorName.trim() || !parsedColor || !colorFormats}
+            >
+              <Save class="mr-2 h-4 w-4" />
+              Save
+            </Button>
+          </div>
+        </div>
+      </CardContent>
     </Card>
   </div>
 
   <!-- Saved Colors -->
-  <Card class="p-6">
-    <div class="space-y-4">
-      <div class="flex items-center justify-between">
-        <h3 class="text-lg font-semibold">Saved Colors</h3>
-        <span class="text-muted-foreground text-sm">
-          {savedColors.length} color{savedColors.length !== 1 ? "s" : ""}
-        </span>
-      </div>
-
+  <Card>
+    <CardHeader>
+      <CardTitle>Saved Colors</CardTitle>
+      <CardDescription>
+        {savedColors.length} color{savedColors.length !== 1 ? "s" : ""}
+      </CardDescription>
+    </CardHeader>
+    <CardContent>
       {#if savedColors.length > 0}
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           {#each savedColors as color (color.id)}
@@ -289,6 +400,6 @@
           <p class="text-sm">Save colors to build your palette</p>
         </div>
       {/if}
-    </div>
+    </CardContent>
   </Card>
 </div>

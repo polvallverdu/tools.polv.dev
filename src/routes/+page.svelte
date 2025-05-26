@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Button } from "@/components/ui/button";
   import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-  import { ArrowRightIcon, CheckIcon, DownloadIcon, ImageIcon } from "@lucide/svelte";
+  import { ArrowRightIcon, CheckIcon, DownloadIcon, ImageIcon, PaletteIcon } from "@lucide/svelte";
   import SvelteSeo from "svelte-seo";
 
   function promptPWA() {
@@ -82,6 +82,26 @@
           </CardTitle>
           <CardDescription>
             Remove the background of an image using various AI models locally in your browser.
+          </CardDescription>
+        </CardHeader>
+        <CardFooter>
+          <Button>
+            <ArrowRightIcon class="h-4 w-4" />
+            Go to tool
+          </Button>
+        </CardFooter>
+      </Card>
+    </a>
+
+    <a href="/css-colors-checker" class="group transition-transform hover:translate-y-[-2px]">
+      <Card class="hover:bg-accent min-w-[300px] transition-colors">
+        <CardHeader>
+          <CardTitle class="flex items-center gap-2">
+            <PaletteIcon class="h-4 w-4" /> CSS Colors Checker
+          </CardTitle>
+          <CardDescription>
+            Check and convert CSS colors between different formats (HEX, RGB, HSL, HWB, OKLAB,
+            OKLCH)
           </CardDescription>
         </CardHeader>
         <CardFooter>
