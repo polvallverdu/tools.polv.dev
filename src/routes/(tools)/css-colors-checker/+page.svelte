@@ -7,11 +7,12 @@
   import { Label } from "@/components/ui/label";
   import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
   import { Separator } from "@/components/ui/separator";
-  import { Save, Trash2, Copy, CheckCircle, Share } from "@lucide/svelte";
+  import { Save, Trash2, Copy, CheckCircle, Share, Sun, Moon, Lightbulb } from "@lucide/svelte";
   import { toast } from "svelte-sonner";
   import { goto } from "$app/navigation";
   import { untrack } from "svelte";
   import { page } from "$app/state";
+  import { Badge } from "@/components/ui/badge";
 
   // Reactive colors table
   const colors = useTable(db, "colors");
@@ -20,6 +21,16 @@
   let colorName = $state("");
   let colorInput = $state("#ff0000");
   let copiedFormat = $state<string | null>(null);
+  let roundDecimals = $state(true);
+  const DECIMAL_PLACES = 4;
+
+  // Helper to round numbers in CSS color strings
+  function roundCssDecimals(cssString: string, decimals: number): string {
+    return cssString.replace(/(\d+\.\d+)/g, (match) => {
+      const num = parseFloat(match);
+      return num.toFixed(decimals).replace(/\.?0+$/, (m) => (m.includes(".") ? "" : m));
+    });
+  }
 
   $effect(() => {
     const currentUrl = untrack(() => page.url);
@@ -43,7 +54,7 @@
   let colorFormats = $derived.by(() => {
     if (!parsedColor) return null;
 
-    return {
+    const formats = {
       hex: culori.formatHex(parsedColor),
       rgb: culori.formatRgb(parsedColor),
       hsl: culori.formatHsl(parsedColor),
@@ -51,6 +62,119 @@
       oklab: culori.formatCss(culori.oklab(parsedColor)),
       oklch: culori.formatCss(culori.oklch(parsedColor)),
     };
+
+    if (roundDecimals) {
+      return {
+        hex: formats.hex,
+        rgb: roundCssDecimals(formats.rgb, DECIMAL_PLACES),
+        hsl: roundCssDecimals(formats.hsl, DECIMAL_PLACES),
+        hwb: roundCssDecimals(formats.hwb, DECIMAL_PLACES),
+        oklab: roundCssDecimals(formats.oklab, DECIMAL_PLACES),
+        oklch: roundCssDecimals(formats.oklch, DECIMAL_PLACES),
+      };
+    }
+
+    return formats;
+  });
+
+  // Contrast checking
+  const WHITE = culori.parse("#ffffff")!;
+  const BLACK = culori.parse("#000000")!;
+  const LIGHT_BG = culori.parse("#f8fafc")!; // slate-50
+  const DARK_BG = culori.parse("#0f172a")!; // slate-900
+
+  type ContrastRating = "AAA" | "AA" | "AA Large" | "Fail";
+
+  function getContrastRating(ratio: number): ContrastRating {
+    if (ratio >= 7) return "AAA";
+    if (ratio >= 4.5) return "AA";
+    if (ratio >= 3) return "AA Large";
+    return "Fail";
+  }
+
+  function getRatingColor(rating: ContrastRating): string {
+    switch (rating) {
+      case "AAA":
+        return "bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/30";
+      case "AA":
+        return "bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/30";
+      case "AA Large":
+        return "bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 border-yellow-500/30";
+      case "Fail":
+        return "bg-red-500/20 text-red-700 dark:text-red-400 border-red-500/30";
+    }
+  }
+
+  let contrastInfo = $derived.by(() => {
+    if (!parsedColor) return null;
+
+    const lightContrast = culori.wcagContrast(parsedColor, LIGHT_BG);
+    const darkContrast = culori.wcagContrast(parsedColor, DARK_BG);
+    const whiteContrast = culori.wcagContrast(parsedColor, WHITE);
+    const blackContrast = culori.wcagContrast(parsedColor, BLACK);
+
+    return {
+      light: {
+        ratio: lightContrast,
+        rating: getContrastRating(lightContrast),
+      },
+      dark: {
+        ratio: darkContrast,
+        rating: getContrastRating(darkContrast),
+      },
+      bestTextOnColor: whiteContrast > blackContrast ? "white" : "black",
+      whiteContrast,
+      blackContrast,
+    };
+  });
+
+  // Generate better color alternatives for poor contrast
+  let colorSuggestions = $derived.by(() => {
+    if (!parsedColor || !contrastInfo) return null;
+
+    const suggestions: {
+      forLight: { color: string; ratio: number; rating: ContrastRating } | null;
+      forDark: { color: string; ratio: number; rating: ContrastRating } | null;
+    } = { forLight: null, forDark: null };
+
+    const oklchColor = culori.oklch(parsedColor);
+    if (!oklchColor) return suggestions;
+
+    // If light theme contrast is poor, suggest a darker version
+    if (contrastInfo.light.rating === "Fail" || contrastInfo.light.rating === "AA Large") {
+      // Decrease lightness to improve contrast on light backgrounds
+      for (let l = (oklchColor.l ?? 0.5) - 0.05; l >= 0.1; l -= 0.05) {
+        const adjusted = { ...oklchColor, l };
+        const ratio = culori.wcagContrast(adjusted, LIGHT_BG);
+        if (ratio >= 4.5) {
+          suggestions.forLight = {
+            color: culori.formatHex(adjusted),
+            ratio,
+            rating: getContrastRating(ratio),
+          };
+          break;
+        }
+      }
+    }
+
+    // If dark theme contrast is poor, suggest a lighter version
+    if (contrastInfo.dark.rating === "Fail" || contrastInfo.dark.rating === "AA Large") {
+      // Increase lightness to improve contrast on dark backgrounds
+      for (let l = (oklchColor.l ?? 0.5) + 0.05; l <= 0.95; l += 0.05) {
+        const adjusted = { ...oklchColor, l };
+        const ratio = culori.wcagContrast(adjusted, DARK_BG);
+        if (ratio >= 4.5) {
+          suggestions.forDark = {
+            color: culori.formatHex(adjusted),
+            ratio,
+            rating: getContrastRating(ratio),
+          };
+          break;
+        }
+      }
+    }
+
+    return suggestions;
   });
 
   // Saved colors
@@ -237,7 +361,17 @@
     <!-- Item 2: Color Formats Card -->
     <Card class="col-start-2 row-span-4 row-start-1">
       <CardHeader>
-        <CardTitle>Color Formats</CardTitle>
+        <div class="flex items-center justify-between">
+          <CardTitle>Color Formats</CardTitle>
+          <label class="flex cursor-pointer items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              bind:checked={roundDecimals}
+              class="accent-primary h-4 w-4 rounded"
+            />
+            <span class="text-muted-foreground">Round decimals</span>
+          </label>
+        </div>
       </CardHeader>
       <CardContent>
         {#if parsedColor && colorFormats}
@@ -341,6 +475,155 @@
       </CardContent>
     </Card>
   </div>
+
+  <!-- Contrast Checker -->
+  {#if parsedColor && contrastInfo && colorFormats}
+    <Card>
+      <CardHeader>
+        <CardTitle class="flex items-center gap-2">
+          Contrast Checker
+          <Badge variant="outline" class="font-normal">WCAG 2.1</Badge>
+        </CardTitle>
+        <CardDescription>
+          Check how your color contrasts against light and dark backgrounds
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div class="grid gap-6 md:grid-cols-2">
+          <!-- Light Theme Contrast -->
+          <div class="space-y-3">
+            <div class="flex items-center gap-2">
+              <Sun class="h-4 w-4 text-amber-500" />
+              <span class="font-medium">Light Theme</span>
+              <Badge class={getRatingColor(contrastInfo.light.rating)}>
+                {contrastInfo.light.rating}
+              </Badge>
+            </div>
+            <div
+              class="flex h-24 items-center justify-center rounded-lg border-2 p-4"
+              style="background-color: #f8fafc; border-color: #e2e8f0;"
+            >
+              <span class="text-lg font-semibold" style="color: {colorFormats.hex};">
+                Sample Text
+              </span>
+            </div>
+            <div class="text-muted-foreground flex items-center justify-between text-sm">
+              <span>Contrast Ratio</span>
+              <span class="font-mono font-medium">{contrastInfo.light.ratio.toFixed(2)}:1</span>
+            </div>
+            {#if colorSuggestions?.forLight}
+              <div class="bg-muted/50 flex items-center gap-3 rounded-lg p-3">
+                <Lightbulb class="h-4 w-4 shrink-0 text-amber-500" />
+                <div class="flex-1 space-y-1">
+                  <p class="text-sm font-medium">Suggested alternative</p>
+                  <div class="flex items-center gap-2">
+                    <button
+                      class="h-6 w-6 rounded border"
+                      style="background-color: {colorSuggestions.forLight.color};"
+                      onclick={() => (colorInput = colorSuggestions!.forLight!.color)}
+                      title="Click to use this color"
+                    ></button>
+                    <code class="text-xs">{colorSuggestions.forLight.color}</code>
+                    <Badge class={getRatingColor(colorSuggestions.forLight.rating)}>
+                      {colorSuggestions.forLight.rating}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+            {/if}
+          </div>
+
+          <!-- Dark Theme Contrast -->
+          <div class="space-y-3">
+            <div class="flex items-center gap-2">
+              <Moon class="h-4 w-4 text-indigo-400" />
+              <span class="font-medium">Dark Theme</span>
+              <Badge class={getRatingColor(contrastInfo.dark.rating)}>
+                {contrastInfo.dark.rating}
+              </Badge>
+            </div>
+            <div
+              class="flex h-24 items-center justify-center rounded-lg border-2 p-4"
+              style="background-color: #0f172a; border-color: #1e293b;"
+            >
+              <span class="text-lg font-semibold" style="color: {colorFormats.hex};">
+                Sample Text
+              </span>
+            </div>
+            <div class="text-muted-foreground flex items-center justify-between text-sm">
+              <span>Contrast Ratio</span>
+              <span class="font-mono font-medium">{contrastInfo.dark.ratio.toFixed(2)}:1</span>
+            </div>
+            {#if colorSuggestions?.forDark}
+              <div class="bg-muted/50 flex items-center gap-3 rounded-lg p-3">
+                <Lightbulb class="h-4 w-4 shrink-0 text-amber-500" />
+                <div class="flex-1 space-y-1">
+                  <p class="text-sm font-medium">Suggested alternative</p>
+                  <div class="flex items-center gap-2">
+                    <button
+                      class="h-6 w-6 rounded border"
+                      style="background-color: {colorSuggestions.forDark.color};"
+                      onclick={() => (colorInput = colorSuggestions!.forDark!.color)}
+                      title="Click to use this color"
+                    ></button>
+                    <code class="text-xs">{colorSuggestions.forDark.color}</code>
+                    <Badge class={getRatingColor(colorSuggestions.forDark.rating)}>
+                      {colorSuggestions.forDark.rating}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+            {/if}
+          </div>
+        </div>
+
+        <!-- Best text color on this background -->
+        <Separator class="my-6" />
+        <div class="space-y-3">
+          <p class="text-sm font-medium">Best text color on this background</p>
+          <div class="grid gap-4 md:grid-cols-2">
+            <div
+              class="flex h-16 items-center justify-center rounded-lg border"
+              style="background-color: {colorFormats.hex};"
+            >
+              <span class="text-lg font-semibold" style="color: white;"> White Text </span>
+            </div>
+            <div
+              class="flex h-16 items-center justify-center rounded-lg border"
+              style="background-color: {colorFormats.hex};"
+            >
+              <span class="text-lg font-semibold" style="color: black;"> Black Text </span>
+            </div>
+          </div>
+          <div class="text-muted-foreground flex justify-between text-sm">
+            <span>
+              White: <span class="font-mono">{contrastInfo.whiteContrast.toFixed(2)}:1</span>
+              <Badge
+                class={getRatingColor(getContrastRating(contrastInfo.whiteContrast))}
+                variant="outline"
+              >
+                {getContrastRating(contrastInfo.whiteContrast)}
+              </Badge>
+            </span>
+            <span>
+              Black: <span class="font-mono">{contrastInfo.blackContrast.toFixed(2)}:1</span>
+              <Badge
+                class={getRatingColor(getContrastRating(contrastInfo.blackContrast))}
+                variant="outline"
+              >
+                {getContrastRating(contrastInfo.blackContrast)}
+              </Badge>
+            </span>
+          </div>
+          <p class="text-muted-foreground text-sm">
+            Recommended: <strong class="text-foreground"
+              >{contrastInfo.bestTextOnColor === "white" ? "White" : "Black"}</strong
+            > text
+          </p>
+        </div>
+      </CardContent>
+    </Card>
+  {/if}
 
   <!-- Saved Colors -->
   <Card>
