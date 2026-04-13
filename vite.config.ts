@@ -7,6 +7,10 @@ export default defineConfig({
     sveltekit(),
     SvelteKitPWA({
       registerType: "autoUpdate",
+      kit: {
+        adapterFallback: "index.html",
+        spa: true,
+      },
     }),
   ],
 });
