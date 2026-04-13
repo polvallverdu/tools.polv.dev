@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Button } from "$lib/components/ui/button";
   import { cn } from "@/utils";
-  import { Home, SquareTerminal, Palette } from "@lucide/svelte";
+  import { Home, SquareTerminal, Palette, FileDown } from "@lucide/svelte";
   import { SheetClose } from "./ui/sheet";
 
   interface Props {
@@ -14,6 +14,7 @@
   const tools = [
     { href: "/background-remover", label: "Background Remover", icon: SquareTerminal },
     { href: "/css-colors-checker", label: "CSS Colors Checker", icon: Palette },
+    { href: "/notion-pdf-export", label: "Notion PDF Export", icon: FileDown },
   ];
 </script>
 

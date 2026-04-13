@@ -10,6 +10,7 @@ A collection of tools I use on my day to day, that might be useful to others.
 
 - [Background Remover](https://tools.polv.dev/background-remover) - A tool to remove the background of an image with local AI inference.
 - [CSS Colors Checker](https://tools.polv.dev/css-colors-checker) - A tool to check the colors of a CSS file.
+- [Notion PDF Export](https://tools.polv.dev/notion-pdf-export) - Export Notion pages to styled PDFs with Mermaid rendering.
 
 ## Contributing
 

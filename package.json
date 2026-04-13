@@ -60,6 +60,10 @@
     "@huggingface/transformers": "^3.4.1",
     "async-lock": "^1.4.1",
     "culori": "^4.0.1",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.2.1",
+    "marked": "^18.0.0",
+    "mermaid": "^11.14.0",
     "svelte-tinybase": "0.0.1",
     "tinybase": "^6.0.0"
   },
