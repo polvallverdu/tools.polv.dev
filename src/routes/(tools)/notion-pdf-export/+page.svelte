@@ -10,11 +10,15 @@
     markdownToHtml,
     renderMermaidBlocks,
   } from "@/tools/notionPdfExport/exportPdf";
-  import { fetchNotionPageAsMarkdown } from "@/tools/notionPdfExport/notion";
+  import {
+    fetchNotionPageAsMarkdown,
+    fetchPublicNotionPageAsMarkdown,
+  } from "@/tools/notionPdfExport/notion";
   import SvelteSeo from "svelte-seo";
 
   let notionToken = $state("");
   let pageInput = $state("");
+  let usePublicPageMode = $state(false);
   let documentTitle = $state("Notion Export");
   let fileName = $state("notion-export.pdf");
   let markdown = $state(`# Example Notion Export
@@ -36,7 +40,7 @@ Use your Notion integration token and page URL above to fetch real content.`);
 
   const previewHtml = $derived(markdownToHtml(markdown, { useGoldHighlight }));
   const canFetch = $derived(
-    Boolean(notionToken.trim() && pageInput.trim() && !isLoadingFromNotion),
+    Boolean(pageInput.trim() && !isLoadingFromNotion && (usePublicPageMode || notionToken.trim())),
   );
   const canExport = $derived(Boolean(markdown.trim()) && !isExporting);
 
@@ -54,14 +58,22 @@ Use your Notion integration token and page URL above to fetch real content.`);
 
     isLoadingFromNotion = true;
     try {
-      const result = await fetchNotionPageAsMarkdown(notionToken.trim(), pageInput.trim());
+      const result = usePublicPageMode
+        ? await fetchPublicNotionPageAsMarkdown(pageInput.trim())
+        : await fetchNotionPageAsMarkdown(notionToken.trim(), pageInput.trim());
       markdown = result.markdown || "_This Notion page appears empty._";
       documentTitle = result.title || "Notion Export";
       fileName = `${slugify(documentTitle)}.pdf`;
-      toast.success(`Fetched page ${result.pageId.slice(0, 8)}… from Notion`);
+      if (result.pageId) {
+        toast.success(`Fetched page ${result.pageId.slice(0, 8)}… from Notion`);
+      } else {
+        toast.success("Fetched public Notion page");
+      }
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Failed to fetch the Notion page with this token.";
+        error instanceof Error
+          ? error.message
+          : "Failed to fetch the Notion page with the selected mode.";
       toast.error(message);
     } finally {
       isLoadingFromNotion = false;
@@ -137,10 +149,19 @@ Try ==gold highlights== by toggling the option on the right.`;
           ><FileText class="h-4 w-4" /> Notion Source</CardTitle
         >
         <CardDescription>
-          Paste your Notion internal integration token and a page URL (or page ID).
+          Use token mode for private pages, or public mode for shared pages without a token.
         </CardDescription>
       </CardHeader>
       <CardContent class="space-y-4">
+        <label class="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            bind:checked={usePublicPageMode}
+            class="accent-primary h-4 w-4 rounded"
+          />
+          Public page mode (no token, uses r.jina.ai reader proxy)
+        </label>
+
         <div class="space-y-2">
           <Label for="notion-token">Notion token</Label>
           <Input
@@ -149,9 +170,14 @@ Try ==gold highlights== by toggling the option on the right.`;
             bind:value={notionToken}
             placeholder="secret_..."
             autocomplete="off"
+            disabled={usePublicPageMode}
           />
           <p class="text-muted-foreground text-xs">
-            Token is used only in your browser session and is not stored.
+            {#if usePublicPageMode}
+              Public mode sends the URL to r.jina.ai to convert it into markdown.
+            {:else}
+              Token is used only in your browser session and is not stored.
+            {/if}
           </p>
         </div>
 
@@ -176,7 +202,7 @@ Try ==gold highlights== by toggling the option on the right.`;
               Fetching...
             {:else}
               <FileText class="mr-2 h-4 w-4" />
-              Fetch from Notion
+              {usePublicPageMode ? "Fetch public page" : "Fetch from Notion"}
             {/if}
           </Button>
           <Button variant="outline" onclick={resetToExample}>

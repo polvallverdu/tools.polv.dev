@@ -337,3 +337,63 @@ export async function fetchNotionPageAsMarkdown(
     pageId,
   };
 }
+
+function parsePublicReaderMarkdown(source: string): string {
+  const marker = "Markdown Content:";
+  const markerIndex = source.indexOf(marker);
+  if (markerIndex >= 0) {
+    return source.slice(markerIndex + marker.length).trim();
+  }
+
+  return source.trim();
+}
+
+function isNotionUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.hostname === "notion.so" || url.hostname.endsWith(".notion.so");
+  } catch {
+    return false;
+  }
+}
+
+function titleFromMarkdown(markdown: string): string {
+  const firstLine = markdown
+    .split("\n")
+    .map((line) => line.trim())
+    .find((line) => line.length > 0);
+
+  if (!firstLine) return "Notion Export";
+  if (firstLine.startsWith("#")) {
+    return firstLine.replace(/^#+\s*/, "").trim() || "Notion Export";
+  }
+
+  return "Notion Export";
+}
+
+export async function fetchPublicNotionPageAsMarkdown(
+  rawPageUrl: string,
+): Promise<{ title: string; markdown: string; pageId: string | null }> {
+  const pageUrl = rawPageUrl.trim();
+  if (!isNotionUrl(pageUrl)) {
+    throw new Error("Public mode requires a valid notion.so page URL.");
+  }
+
+  const readerUrl = `https://r.jina.ai/http://${pageUrl.replace(/^https?:\/\//, "")}`;
+  const response = await fetch(readerUrl);
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch public page: ${response.status} ${response.statusText}`);
+  }
+
+  const rawMarkdown = parsePublicReaderMarkdown(await response.text());
+  if (!rawMarkdown) {
+    throw new Error("The public page could not be converted to markdown.");
+  }
+
+  return {
+    title: titleFromMarkdown(rawMarkdown),
+    markdown: rawMarkdown,
+    pageId: extractPageId(pageUrl),
+  };
+}

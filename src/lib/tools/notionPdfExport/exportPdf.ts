@@ -68,6 +68,7 @@ export async function renderMermaidBlocks(container: HTMLElement): Promise<void>
 
 function createPrintableContainer(title: string, html: string): HTMLElement {
   const container = document.createElement("div");
+  container.dataset.notionPdfExportRoot = "true";
   container.style.position = "fixed";
   container.style.left = "-10000px";
   container.style.top = "0";
@@ -193,6 +194,23 @@ export async function exportMarkdownToPdf(params: {
       useCORS: true,
       windowWidth: container.scrollWidth,
       windowHeight: container.scrollHeight,
+      onclone: (clonedDocument) => {
+        // Tailwind v4 uses oklch colors that html2canvas cannot parse.
+        // Strip global styles from the cloned document and keep only our export container styles.
+        const root = clonedDocument.querySelector<HTMLElement>(
+          '[data-notion-pdf-export-root="true"]',
+        );
+        if (!root) return;
+
+        clonedDocument
+          .querySelectorAll('head style, head link[rel="stylesheet"]')
+          .forEach((element) => element.remove());
+
+        clonedDocument.body.innerHTML = "";
+        clonedDocument.body.style.margin = "0";
+        clonedDocument.body.style.background = "#ffffff";
+        clonedDocument.body.appendChild(root);
+      },
     });
 
     canvasToPdf(canvas, fileName);
